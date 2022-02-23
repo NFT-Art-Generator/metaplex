@@ -1,25 +1,23 @@
+import { BN, Program, web3 } from '@project-serum/anchor';
+import { PublicKey } from '@solana/web3.js';
+import fs from 'fs';
 import { readFile } from 'fs/promises';
-import path from 'path';
 import log from 'loglevel';
+import path from 'path';
 import {
   createCandyMachineV2,
   loadCandyProgram,
   loadWalletKey,
 } from '../helpers/accounts';
-import { PublicKey } from '@solana/web3.js';
-import fs from 'fs';
-import { BN, Program, web3 } from '@project-serum/anchor';
-
 import { loadCache, saveCache } from '../helpers/cache';
+import { StorageType } from '../helpers/storage-type';
 import { arweaveUpload } from '../helpers/upload/arweave';
 import { makeArweaveBundleUploadGenerator } from '../helpers/upload/arweave-bundle';
 import { awsUpload } from '../helpers/upload/aws';
 import { ipfsCreds, ipfsUpload } from '../helpers/upload/ipfs';
-
-import { StorageType } from '../helpers/storage-type';
-import { AssetKey } from '../types';
-import { chunks, sleep } from '../helpers/various';
 import { nftStorageUpload } from '../helpers/upload/nft-storage';
+import { chunks, sleep } from '../helpers/various';
+import { AssetKey } from '../types';
 
 export async function uploadV2({
   files,
@@ -282,6 +280,9 @@ export async function uploadV2({
                       animation,
                       manifestBuffer,
                     );
+                    break;
+                  case StorageType.Pinata:
+                    [link, imageLink, animationLink] = await pinataUpload();
                     break;
                   case StorageType.Arweave:
                   default:
@@ -689,6 +690,11 @@ export async function upload({
               if (i >= lastPrinted + tick || i === 0) {
                 lastPrinted = i;
                 log.info(`Processing asset: ${assetKey}`);
+              }
+
+              if (cache[assetKey.index]) {
+                log.warn(`Asset ${assetKey} already exists in cache.`);
+                continue;
               }
 
               let link, imageLink, animationLink;
