@@ -1,9 +1,37 @@
 #!/usr/bin/env ts-node
-import * as fs from 'fs';
-import * as path from 'path';
-import { InvalidArgumentError, program } from 'commander';
 import * as anchor from '@project-serum/anchor';
-
+import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
+import { InvalidArgumentError, program } from 'commander';
+import * as fs from 'fs';
+import log from 'loglevel';
+import { getType } from 'mime';
+import * as path from 'path';
+import { mintV2 } from './commands/mint';
+import { signMetadata } from './commands/sign';
+import {
+  getAccountsByCreatorAddress,
+  signAllMetadataFromCandyMachine,
+} from './commands/signAll';
+import { updateFromCache } from './commands/updateFromCache';
+import { uploadV2 } from './commands/upload';
+import { verifyTokenMetadata } from './commands/verifyTokenMetadata';
+import { withdrawV2 } from './commands/withdraw';
+import {
+  AccountAndPubkey,
+  deriveCandyMachineV2ProgramAddress,
+  getProgramAccounts,
+  loadCandyProgramV2,
+  loadWalletKey,
+} from './helpers/accounts';
+import { loadCache, saveCache } from './helpers/cache';
+import {
+  CACHE_PATH,
+  CANDY_MACHINE_PROGRAM_V2_ID,
+  CONFIG_ARRAY_START_V2,
+  CONFIG_LINE_SIZE_V2,
+  EXTENSION_JSON,
+} from './helpers/constants';
+import { StorageType } from './helpers/storage-type';
 import {
   chunks,
   fromUTF8Array,
@@ -11,41 +39,13 @@ import {
   parsePrice,
   shuffle,
 } from './helpers/various';
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import {
-  CACHE_PATH,
-  CONFIG_LINE_SIZE_V2,
-  EXTENSION_JSON,
-  CANDY_MACHINE_PROGRAM_V2_ID,
-  CONFIG_ARRAY_START_V2,
-} from './helpers/constants';
-import {
-  getProgramAccounts,
-  loadCandyProgramV2,
-  loadWalletKey,
-  AccountAndPubkey,
-  deriveCandyMachineV2ProgramAddress,
-} from './helpers/accounts';
 
-import { uploadV2 } from './commands/upload';
-import { verifyTokenMetadata } from './commands/verifyTokenMetadata';
-import { loadCache, saveCache } from './helpers/cache';
-import { mintV2 } from './commands/mint';
-import { signMetadata } from './commands/sign';
-import {
-  getAccountsByCreatorAddress,
-  signAllMetadataFromCandyMachine,
-} from './commands/signAll';
-import log from 'loglevel';
-import { withdrawV2 } from './commands/withdraw';
-import { updateFromCache } from './commands/updateFromCache';
-import { StorageType } from './helpers/storage-type';
-import { getType } from 'mime';
 program.version('0.0.2');
 const supportedImageTypes = {
   'image/png': 1,
   'image/gif': 1,
   'image/jpeg': 1,
+  'image/webp': 1,
 };
 const supportedAnimationTypes = {
   'video/mp4': 1,
