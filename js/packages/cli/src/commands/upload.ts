@@ -281,9 +281,6 @@ export async function uploadV2({
                       manifestBuffer,
                     );
                     break;
-                  case StorageType.Pinata:
-                    [link, imageLink, animationLink] = await pinataUpload();
-                    break;
                   case StorageType.Arweave:
                   default:
                     [link, imageLink] = await arweaveUpload(
