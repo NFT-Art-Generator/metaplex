@@ -1,13 +1,13 @@
-import { LAMPORTS_PER_SOL, AccountInfo } from '@solana/web3.js';
-import fs from 'fs';
-import weighted from 'weighted';
-import path from 'path';
+import { UseMethod, Uses } from '@metaplex-foundation/mpl-token-metadata';
 import { BN, Program, web3 } from '@project-serum/anchor';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { StorageType } from './storage-type';
+import { AccountInfo, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import fs from 'fs';
+import path from 'path';
+import weighted from 'weighted';
 import { getAtaForMint } from './accounts';
 import { CLUSTERS, DEFAULT_CLUSTER } from './constants';
-import { Uses, UseMethod } from '@metaplex-foundation/mpl-token-metadata';
+import { StorageType } from './storage-type';
 
 const { readFile } = fs.promises;
 
@@ -47,6 +47,7 @@ export async function getCandyMachineV2Config(
   goLiveDate: BN | null;
   uuid: string;
   arweaveJwk: string;
+  cid?: string;
 }> {
   if (configPath === undefined) {
     throw new Error('The configPath is undefined');
@@ -77,6 +78,7 @@ export async function getCandyMachineV2Config(
     goLiveDate,
     uuid,
     arweaveJwk,
+    cid,
   } = config;
 
   let wallet;
@@ -205,6 +207,7 @@ export async function getCandyMachineV2Config(
     goLiveDate: goLiveDate ? new BN(parseDate(goLiveDate)) : null,
     uuid,
     arweaveJwk,
+    cid,
   };
 }
 export async function readJsonFile(fileName: string) {

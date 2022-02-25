@@ -44,6 +44,7 @@ export async function uploadV2({
   anchorProgram,
   arweaveJwk,
   rateLimit,
+  cid,
 }: {
   files: string[];
   cacheName: string;
@@ -81,6 +82,7 @@ export async function uploadV2({
   anchorProgram: Program;
   arweaveJwk: string;
   rateLimit: number;
+  cid: string;
 }): Promise<boolean> {
   let uploadSuccessful = true;
   const savedContent = loadCache(cacheName, env);
@@ -97,14 +99,11 @@ export async function uploadV2({
   const dedupedAssetKeys = getAssetKeysNeedingUpload(cacheContent.items, files);
   const SIZE = dedupedAssetKeys.length;
 
-  const dirname = path.dirname(files[0]);
   let candyMachine = cacheContent.program.candyMachine
     ? new PublicKey(cacheContent.program.candyMachine)
     : undefined;
 
   if (!cacheContent.program.uuid) {
-    const firstAssetManifest = getAssetManifest(dirname, '0');
-
     try {
       const remainingAccounts = [];
 
@@ -118,13 +117,9 @@ export async function uploadV2({
         });
       }
 
-      if (
-        !firstAssetManifest.properties?.creators?.every(
-          creator => creator.address !== undefined,
-        )
-      ) {
-        throw new Error('Creator address is missing');
-      }
+      const md = await fetch(
+        `https://cloudflare-ipfs.com/ipfs/${cid}/1.json`,
+      ).then(r => r.json());
 
       // initialize candy
       log.info(`initializing candy machine`);
@@ -136,8 +131,8 @@ export async function uploadV2({
         {
           itemsAvailable: new BN(totalNFTs),
           uuid,
-          symbol: firstAssetManifest.symbol,
-          sellerFeeBasisPoints: firstAssetManifest.seller_fee_basis_points,
+          symbol: md.symbol,
+          sellerFeeBasisPoints: md.seller_fee_basis_points,
           isMutable: mutable,
           maxSupply: new BN(0),
           retainAuthority: retainAuthority,
@@ -147,7 +142,7 @@ export async function uploadV2({
           endSettings,
           whitelistMintSettings,
           hiddenSettings,
-          creators: firstAssetManifest.properties.creators.map(creator => {
+          creators: md.properties.creators.map(creator => {
             return {
               address: new PublicKey(creator.address),
               verified: true,
@@ -176,6 +171,7 @@ export async function uploadV2({
   }
 
   console.log('Uploading Size', SIZE, dedupedAssetKeys[0]);
+  const dirname = '';
 
   if (dedupedAssetKeys.length) {
     if (
@@ -340,7 +336,7 @@ export async function uploadV2({
     log.info('Skipping upload to chain as this is a hidden Candy Machine');
   }
 
-  console.log(`Done. Successful = ${uploadSuccessful}.`);
+  console.log(`[SUCCESS] ${uploadSuccessful}.`);
   return uploadSuccessful;
 }
 

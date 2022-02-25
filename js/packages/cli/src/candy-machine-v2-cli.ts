@@ -4,7 +4,6 @@ import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import { InvalidArgumentError, program } from 'commander';
 import * as fs from 'fs';
 import log from 'loglevel';
-import { getType } from 'mime';
 import * as path from 'path';
 import { mintV2 } from './commands/mint';
 import { signMetadata } from './commands/sign';
@@ -29,7 +28,6 @@ import {
   CANDY_MACHINE_PROGRAM_V2_ID,
   CONFIG_ARRAY_START_V2,
   CONFIG_LINE_SIZE_V2,
-  EXTENSION_JSON,
 } from './helpers/constants';
 import { StorageType } from './helpers/storage-type';
 import {
@@ -41,21 +39,6 @@ import {
 } from './helpers/various';
 
 program.version('0.0.2');
-const supportedImageTypes = {
-  'image/png': 1,
-  'image/gif': 1,
-  'image/jpeg': 1,
-  'image/webp': 1,
-};
-const supportedAnimationTypes = {
-  'video/mp4': 1,
-  'video/quicktime': 1,
-  'audio/mpeg': 1,
-  'audio/x-flac': 1,
-  'audio/wav': 1,
-  'model/gltf-binary': 1,
-  'text/html': 1,
-};
 
 if (!fs.existsSync(CACHE_PATH)) {
   fs.mkdirSync(CACHE_PATH);
@@ -121,6 +104,7 @@ programCommand('upload')
       whitelistMintSettings,
       goLiveDate,
       uuid,
+      cid,
     } = await getCandyMachineV2Config(walletKeyPair, anchorProgram, configPath);
 
     if (storage === StorageType.ArweaveSol && env !== 'mainnet-beta') {
@@ -176,65 +160,14 @@ programCommand('upload')
       secretKey: ipfsInfuraSecret,
     };
 
-    let imageFileCount = 0;
-    let animationFileCount = 0;
-    let jsonFileCount = 0;
-
-    // Filter out any non-supported file types and find the JSON vs Image file count
-    const supportedFiles = files.filter(it => {
-      if (supportedImageTypes[getType(it)]) {
-        imageFileCount++;
-      } else if (supportedAnimationTypes[getType(it)]) {
-        animationFileCount++;
-      } else if (it.endsWith(EXTENSION_JSON)) {
-        jsonFileCount++;
-      } else {
-        log.warn(`WARNING: Skipping unsupported file type ${it}`);
-        return false;
-      }
-
-      return true;
-    });
-
-    if (animationFileCount !== 0 && storage === StorageType.Arweave) {
-      throw new Error(
-        'The "arweave" storage option is incompatible with animation files. Please try again with another storage option using `--storage <option>`.',
-      );
-    }
-
-    if (animationFileCount !== 0 && animationFileCount !== jsonFileCount) {
-      throw new Error(
-        `number of animation files (${animationFileCount}) is different than the number of json files (${jsonFileCount})`,
-      );
-    } else if (imageFileCount !== jsonFileCount) {
-      throw new Error(
-        `number of img files (${imageFileCount}) is different than the number of json files (${jsonFileCount})`,
-      );
-    }
-
-    const elemCount = number ? number : imageFileCount;
-    if (elemCount < imageFileCount) {
-      throw new Error(
-        `max number (${elemCount}) cannot be smaller than the number of images in the source folder (${imageFileCount})`,
-      );
-    }
-
-    if (animationFileCount === 0) {
-      log.info(`Beginning the upload for ${elemCount} (img+json) pairs`);
-    } else {
-      log.info(
-        `Beginning the upload for ${elemCount} (img+animation+json) sets`,
-      );
-    }
-
     const startMs = Date.now();
     log.info('started at: ' + startMs.toString());
     try {
       await uploadV2({
-        files: supportedFiles,
+        files: [],
         cacheName,
         env,
-        totalNFTs: elemCount,
+        totalNFTs: number,
         gatekeeper,
         storage,
         retainAuthority,
@@ -255,6 +188,7 @@ programCommand('upload')
         uuid,
         arweaveJwk,
         rateLimit,
+        cid,
       });
     } catch (err) {
       log.warn('upload was not successful, please re-run.', err);
@@ -564,7 +498,7 @@ programCommand('verify_upload')
         }) is smaller than the uploaded one (${lineCount.toNumber()})`,
       );
     } else {
-      log.info('ready to deploy!');
+      log.info('[SUCCESS]');
     }
 
     saveCache(cacheName, env, cacheContent);
