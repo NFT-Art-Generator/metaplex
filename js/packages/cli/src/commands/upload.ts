@@ -117,9 +117,9 @@ export async function uploadV2({
         });
       }
 
-      const md = await fetch(
-        `https://cloudflare-ipfs.com/ipfs/${cid}/1.json`,
-      ).then(r => r.json());
+      const md = await fetch(`https://ipfs.io/ipfs/${cid}/1.json`).then(r =>
+        r.json(),
+      );
 
       // initialize candy
       log.info(`initializing candy machine`);
